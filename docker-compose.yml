@@ -15,16 +15,20 @@ x-ollama-common: &ollama-common
   volumes:
     - ollama_data:/root/.ollama
   environment:
-    - OLLAMA_HOST=localhost
+    - OLLAMA_HOST=0.0.0.0
     - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
     - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-2}
     - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}
   healthcheck:
-    test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+    test: ["CMD", "ollama", "list"]
     interval: 30s
     timeout: 10s
     retries: 5
     start_period: 20s
+  networks:
+    ollama_net:
+      aliases:
+        - ollama
 
 services:
   # ---------------------------------------------------------------------------
@@ -64,7 +68,7 @@ services:
     volumes:
       - webui_data:/app/backend/data
     environment:
-      - OLLAMA_BASE_URL=http://localhost:11434
+      - OLLAMA_BASE_URL=http://ollama:11434
       - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-changeme-secret-key}
     depends_on:
       ollama-cpu:
@@ -91,7 +95,7 @@ services:
       - ./environment.yml:/tmp/environment.yml:ro
     environment:
       - JUPYTER_ENABLE_LAB=yes
-      - OLLAMA_HOST=http://localhost:11434
+      - OLLAMA_HOST=http://ollama:11434
     command: >
       bash -c "
         pip install -q ollama langchain-ollama langchain-community llama-index-llms-ollama &&
@@ -106,7 +110,7 @@ services:
   ollama-pull:
     image: ollama/ollama:latest
     container_name: ollama-pull
-    profiles: [pull]
+    profiles: [ollama-pull]
     volumes:
       - ollama_data:/root/.ollama
     entrypoint: ["/bin/sh", "-c"]
