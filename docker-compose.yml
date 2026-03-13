@@ -1,0 +1,134 @@
+# =============================================================================
+# Ollama Docker Compose
+# =============================================================================
+# 사용법:
+#   CPU:          docker compose --profile cpu up -d
+#   NVIDIA GPU:   docker compose --profile nvidia up -d
+#   Open-WebUI:   docker compose --profile cpu --profile webui up -d
+# =============================================================================
+
+x-ollama-common: &ollama-common
+  image: ollama/ollama:latest
+  restart: unless-stopped
+  ports:
+    - "${OLLAMA_PORT:-11434}:11434"
+  volumes:
+    - ollama_data:/root/.ollama
+  environment:
+    - OLLAMA_HOST=localhost
+    - OLLAMA_KEEP_ALIVE=${OLLAMA_KEEP_ALIVE:-5m}
+    - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-2}
+    - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}
+  healthcheck:
+    test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+    start_period: 20s
+
+services:
+  # ---------------------------------------------------------------------------
+  # Ollama — CPU only
+  # ---------------------------------------------------------------------------
+  ollama-cpu:
+    <<: *ollama-common
+    container_name: ollama-cpu
+    profiles: [cpu]
+
+  # ---------------------------------------------------------------------------
+  # Ollama — NVIDIA GPU
+  # (사전 조건: nvidia-container-toolkit 설치 필요)
+  # ---------------------------------------------------------------------------
+  ollama-nvidia:
+    <<: *ollama-common
+    container_name: ollama-nvidia
+    profiles: [nvidia]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # ---------------------------------------------------------------------------
+  # Open-WebUI — Ollama 웹 인터페이스
+  # ---------------------------------------------------------------------------
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: open-webui
+    profiles: [webui]
+    restart: unless-stopped
+    ports:
+      - "${WEBUI_PORT:-3000}:8080"
+    volumes:
+      - webui_data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://localhost:11434
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-changeme-secret-key}
+    depends_on:
+      ollama-cpu:
+        condition: service_healthy
+        required: false
+      ollama-nvidia:
+        condition: service_healthy
+        required: false
+    networks:
+      - ollama_net
+
+  # ---------------------------------------------------------------------------
+  # Jupyter Lab — 노트북 환경 (ollama Python 클라이언트 포함)
+  # ---------------------------------------------------------------------------
+  jupyter:
+    image: quay.io/jupyter/scipy-notebook:latest
+    container_name: ollama-jupyter
+    profiles: [jupyter]
+    restart: unless-stopped
+    ports:
+      - "${JUPYTER_PORT:-8888}:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./environment.yml:/tmp/environment.yml:ro
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - OLLAMA_HOST=http://localhost:11434
+    command: >
+      bash -c "
+        pip install -q ollama langchain-ollama langchain-community llama-index-llms-ollama &&
+        start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+      "
+    networks:
+      - ollama_net
+
+  # ---------------------------------------------------------------------------
+  # Ollama 모델 자동 Pull (init container 역할)
+  # ---------------------------------------------------------------------------
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: ollama-pull
+    profiles: [pull]
+    volumes:
+      - ollama_data:/root/.ollama
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        sleep 5
+        ollama pull ${DEFAULT_MODEL:-llama3.2:3b}
+        ollama pull ${EMBED_MODEL:-nomic-embed-text}
+        wait
+    networks:
+      - ollama_net
+
+# ---------------------------------------------------------------------------
+# Networks & Volumes
+# ---------------------------------------------------------------------------
+networks:
+  ollama_net:
+    driver: bridge
+
+volumes:
+  ollama_data:
+    driver: local
+  webui_data:
+    driver: local
