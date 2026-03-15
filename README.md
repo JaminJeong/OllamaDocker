@@ -1,6 +1,6 @@
 # OllmaRunTime
 
-Ollama를 로컬 또는 Docker 환경에서 빠르게 구성하기 위한 Anaconda 환경 및 Docker Compose 템플릿입니다.
+Ollama를 Docker 환경에서 빠르게 구성하기 위한 Docker Compose 템플릿입니다.
 
 ---
 
@@ -9,7 +9,6 @@ Ollama를 로컬 또는 Docker 환경에서 빠르게 구성하기 위한 Anacon
 - [파일 구조](#파일-구조)
 - [사전 요구사항](#사전-요구사항)
 - [빠른 시작](#빠른-시작)
-- [Conda 환경 (로컬 설치)](#conda-환경-로컬-설치)
 - [Docker Compose 환경](#docker-compose-환경)
 - [Python 사용 예제](#python-사용-예제)
 - [환경변수 설정](#환경변수-설정)
@@ -23,8 +22,6 @@ Ollama를 로컬 또는 Docker 환경에서 빠르게 구성하기 위한 Anacon
 OllmaRunTime/
 ├── README.md              # 이 파일 — 전체 사용 가이드
 ├── STRUCTURE.md           # 파일별 상세 구조 설명
-├── environment.yml        # Conda 환경 정의 (Python 패키지 목록)
-├── build.sh               # 설치/빌드 자동화 스크립트
 ├── docker-compose.yml     # Docker Compose 서비스 정의
 ├── .env.example           # 환경변수 템플릿
 └── notebooks/             # JupyterLab 작업 디렉토리 (Docker 마운트용)
@@ -33,14 +30,6 @@ OllmaRunTime/
 ---
 
 ## 사전 요구사항
-
-### 로컬 (Conda) 환경
-
-| 항목 | 버전 | 비고 |
-|------|------|------|
-| Anaconda / Miniconda | 최신 | [설치 가이드](https://docs.conda.io/en/latest/miniconda.html) |
-| curl | 任意 | Ollama 설치 스크립트 실행에 필요 |
-| NVIDIA 드라이버 | ≥ 520 | GPU 사용 시 |
 
 ### Docker 환경
 
@@ -53,23 +42,6 @@ OllmaRunTime/
 ---
 
 ## 빠른 시작
-
-### 로컬 Conda 환경
-
-```bash
-# 1. 저장소 클론
-git clone <repo-url> OllmaRunTime
-cd OllmaRunTime
-
-# 2. 전체 설치 (Ollama + Conda 환경 + 기본 모델)
-./build.sh all
-
-# 3. 환경 활성화
-conda activate ollama-env
-
-# 4. 동작 확인
-curl http://localhost:11434/api/tags
-```
 
 ### Docker (CPU)
 
@@ -86,41 +58,6 @@ docker compose --profile nvidia up -d
 ```
 
 ---
-
-## Conda 환경 (로컬 설치)
-
-### build.sh 명령어
-
-```bash
-./build.sh [명령어]
-```
-
-| 명령어 | 설명 |
-|--------|------|
-| `all` | 전체 설치 (기본값) |
-| `install` | Ollama 바이너리만 설치 |
-| `conda` | Conda 환경만 생성/업데이트 |
-| `start` | Ollama 서비스만 시작 |
-| `models` | 기본 모델만 Pull |
-
-### Conda 환경 직접 관리
-
-```bash
-# 환경 생성
-conda env create -f environment.yml
-
-# 환경 업데이트 (패키지 변경 후)
-conda env update -n ollama-env -f environment.yml --prune
-
-# 환경 활성화
-conda activate ollama-env
-
-# 환경 삭제
-conda env remove -n ollama-env
-
-# 환경 내보내기 (현재 상태 스냅샷)
-conda env export -n ollama-env > environment.lock.yml
-```
 
 ### Ollama 서비스 관리
 

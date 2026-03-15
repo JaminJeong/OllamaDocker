@@ -17,74 +17,6 @@ OllmaRunTime/
 
 ## 파일별 역할
 
-### `environment.yml` — Conda 환경 정의
-
-Conda가 읽는 환경 명세 파일입니다. 이 파일 하나로 Python 버전과 모든 패키지를 재현할 수 있습니다.
-
-```
-환경 이름: ollama-env
-Python:    3.11
-```
-
-**포함 패키지 분류**
-
-| 분류 | 패키지 | 용도 |
-|------|--------|------|
-| Conda 네이티브 | `python`, `pip`, `curl`, `ipykernel`, `jupyterlab`, `notebook`, `ipywidgets` | 기본 환경 및 노트북 |
-| Ollama 클라이언트 | `ollama` | Ollama REST API Python 래퍼 |
-| HTTP | `httpx`, `requests` | API 직접 호출 |
-| LangChain | `langchain`, `langchain-ollama`, `langchain-community` | LLM 체인 구성 |
-| LlamaIndex | `llama-index-core`, `llama-index-llms-ollama`, `llama-index-embeddings-ollama` | RAG 파이프라인 |
-| 유틸리티 | `python-dotenv`, `pydantic`, `rich`, `tqdm` | 설정 관리, 출력 포맷 |
-
-**환경 재생성 / 업데이트 방법**
-
-```bash
-# 최초 생성
-conda env create -f environment.yml
-
-# 패키지 추가 후 업데이트
-conda env update -n ollama-env -f environment.yml --prune
-
-# 현재 상태를 파일로 내보내기 (버전 고정 스냅샷)
-conda env export -n ollama-env > environment.lock.yml
-```
-
----
-
-### `build.sh` — 빌드 및 설치 스크립트
-
-단계별 또는 한 번에 전체 환경을 구성하는 자동화 스크립트입니다.
-
-**실행 흐름 (all 모드)**
-
-```
-build.sh all
-  │
-  ├─ 1. install_ollama()      Ollama 바이너리 설치 (curl 스크립트 실행)
-  ├─ 2. detect_gpu()          nvidia-smi로 GPU 감지 → GPU_TYPE 설정
-  ├─ 3. setup_conda_env()     environment.yml로 conda 환경 생성 또는 업데이트
-  ├─ 4. start_ollama_service() nohup으로 백그라운드 서비스 실행 + 헬스체크
-  ├─ 5. pull_default_models() 기본 모델 Pull (GPU 여부에 따라 목록 다름)
-  └─ 6. print_usage()         사용법 출력
-```
-
-**서브커맨드**
-
-```bash
-./build.sh all      # 전체 실행 (기본값)
-./build.sh install  # Ollama 바이너리 설치만
-./build.sh conda    # Conda 환경 생성/업데이트만
-./build.sh start    # Ollama 서비스 시작만
-./build.sh models   # 기본 모델 Pull만
-```
-
-**환경변수 오버라이드**
-
-```bash
-OLLAMA_HOST=127.0.0.1 OLLAMA_PORT=12000 ./build.sh start
-```
-
 ---
 
 ### `docker-compose.yml` — Docker Compose 서비스 정의
@@ -164,9 +96,6 @@ cp .env.example .env
 ## 환경 선택 가이드
 
 ```
-로컬 개발 / 빠른 테스트
-  └─► build.sh + Conda 환경
-
 팀 공유 / 서버 배포 / 격리 필요
   └─► Docker Compose
 
@@ -181,5 +110,4 @@ NVIDIA GPU 있는 환경
 
 노트북 실험
   └─► profile: jupyter  →  http://localhost:8888
-      또는 conda activate ollama-env && jupyter lab
 ```
